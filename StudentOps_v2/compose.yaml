@@ -1,0 +1,25 @@
+services:
+  db:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set in .env}
+      MYSQL_DATABASE: students
+      MYSQL_USER: student
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?set in .env}
+    volumes: [dbdata:/var/lib/mysql]
+    healthcheck:
+      test: [CMD-SHELL, 'mysqladmin ping -h localhost --silent']
+      interval: 5s
+      retries: 30
+  app:
+    build: .
+    environment:
+      DATABASE_URL: mysql+pymysql://student:${MYSQL_PASSWORD}@db/students
+      SECRET_KEY: ${SECRET_KEY:?set in .env}
+      ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH:?set in .env}
+    depends_on:
+      db: {condition: service_healthy}
+    command: [sh, -c, 'flask --app app init-db && exec gunicorn -b 0.0.0.0:5000 --access-logfile - app:app']
+    ports: ['127.0.0.1:8080:5000']
+volumes:
+  dbdata:

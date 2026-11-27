@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: studentops-green}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: studentops, color: green}}
+  template:
+    metadata: {labels: {app: studentops, color: green}, annotations: {prometheus.io/scrape: 'true', prometheus.io/port: '5000'}}
+    spec:
+      serviceAccountName: studentops
+      automountServiceAccountToken: false
+      containers:
+      - name: app
+        image: studentops:local
+        imagePullPolicy: IfNotPresent
+        command: [sh, -c, 'until flask --app app init-db; do sleep 5; done; exec gunicorn -b 0.0.0.0:5000 --access-logfile - app:app']
+        envFrom: [{configMapRef: {name: studentops-config}}, {secretRef: {name: studentops-secret}}]
+        ports: [{containerPort: 5000}]
+        readinessProbe: {httpGet: {path: /health, port: 5000}, initialDelaySeconds: 5}
+        livenessProbe: {httpGet: {path: /health, port: 5000}, initialDelaySeconds: 30}
+        securityContext: {runAsNonRoot: true, allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}}
+        resources: {requests: {cpu: 100m, memory: 128Mi}, limits: {cpu: 500m, memory: 512Mi}}

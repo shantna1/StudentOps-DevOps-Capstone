@@ -1,0 +1,8 @@
+prometheus:
+  prometheusSpec:
+    additionalScrapeConfigs:
+      - job_name: studentops
+        kubernetes_sd_configs: [{role: pod, namespaces: {names: [studentops]}}]
+        relabel_configs:
+          - {source_labels: [__meta_kubernetes_pod_label_app], regex: studentops, action: keep}
+          - {source_labels: [__meta_kubernetes_pod_container_port_number], regex: '5000', action: keep}

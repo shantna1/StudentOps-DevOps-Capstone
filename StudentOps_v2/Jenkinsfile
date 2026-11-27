@@ -1,0 +1,22 @@
+pipeline {
+  agent any
+  triggers { githubPush() }
+  environment { IMAGE = 'YOUR_DOCKERHUB_USER/studentops'; SECRET_KEY = 'ci-test-only' }
+  stages {
+    stage('Test') { steps { sh 'python3 -m venv .venv && .venv/bin/pip install -r requirements.txt && .venv/bin/python -m pytest --cov=app --cov-report=xml' } }
+    stage('SonarQube') { steps { withSonarQubeEnv('SonarQube') { sh 'sonar-scanner' } } }
+    stage('Build') { steps { sh 'docker build -t $IMAGE:$BUILD_NUMBER .' } }
+    stage('Scan') { steps { sh 'trivy image --exit-code 1 --severity HIGH,CRITICAL $IMAGE:$BUILD_NUMBER' } }
+    stage('Publish') { when { branch 'main' }; steps { withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'REG_USER', passwordVariable: 'REG_TOKEN')]) { sh 'echo "$REG_TOKEN" | docker login -u "$REG_USER" --password-stdin; docker push $IMAGE:$BUILD_NUMBER; docker logout' } } }
+    stage('GitOps update') { when { branch 'main' }; steps { sshagent(credentials: ['gitops-ssh']) { sh '''git clone "$GITOPS_REPO" gitops-release
+cd gitops-release
+sed -i.bak "s|image: .*studentops.*|image: $IMAGE:$BUILD_NUMBER|" kubernetes/green.yaml
+rm -f kubernetes/green.yaml.bak
+git config user.email ci@example.com
+git config user.name StudentOps-CI
+git add kubernetes/green.yaml
+git commit -m "Deploy candidate $BUILD_NUMBER"
+git push origin main''' } } } }
+  }
+  post { always { archiveArtifacts artifacts: 'coverage.xml', allowEmptyArchive: true } }
+}

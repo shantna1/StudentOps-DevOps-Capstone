@@ -1,0 +1,13 @@
+- hosts: lab
+  tasks:
+    - name: Install Minikube and kubectl on Linux AMD64
+      become: true
+      ansible.builtin.get_url:
+        url: '{{ item.url }}'
+        dest: '/usr/local/bin/{{ item.name }}'
+        mode: '0755'
+      loop:
+        - {name: minikube, url: 'https://storage.googleapis.com/minikube/releases/v1.35.0/minikube-linux-amd64'}
+        - {name: kubectl, url: 'https://dl.k8s.io/release/v1.32.0/bin/linux/amd64/kubectl'}
+    - ansible.builtin.command: minikube start --driver=docker
+      changed_when: false

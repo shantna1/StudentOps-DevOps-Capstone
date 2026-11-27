@@ -1,0 +1,8 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata: {name: studentops, namespace: argocd}
+spec:
+  project: default
+  source: {repoURL: 'https://github.com/YOUR_USER/studentops-gitops.git', targetRevision: main, path: kubernetes}
+  destination: {server: 'https://kubernetes.default.svc', namespace: studentops}
+  syncPolicy: {automated: {prune: true, selfHeal: true}}

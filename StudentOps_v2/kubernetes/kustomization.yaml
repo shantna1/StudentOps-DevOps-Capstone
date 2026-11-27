@@ -1,0 +1,1 @@
+resources: [config.yaml, mysql.yaml, blue.yaml, green.yaml, service.yaml, rbac.yaml]

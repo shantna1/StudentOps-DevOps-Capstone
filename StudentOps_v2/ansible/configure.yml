@@ -1,0 +1,5 @@
+- hosts: lab
+  tasks:
+    - ansible.builtin.command: kubectl -n studentops apply -f ../kubernetes/config.yaml
+      args:
+        chdir: '{{ playbook_dir }}'
